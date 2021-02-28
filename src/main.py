@@ -17,9 +17,15 @@ FOLDER = os.getenv("S3_FOLDER", "uploads")
 DOMAIN = os.getenv("S3_DOMAIN")
 VERSION = os.getenv("BUNDLE_VERSION", "1.0")
 PREFIX = os.getenv("BUNDLE_PREFIX", "com." + BUCKET)
-P12 = os.getenv("P12_PATH")
+P12 = os.path.abspath(os.getenv("P12_PATH"))
 PASSWORD = os.getenv("P12_PASSWORD")
-PROVISION = os.getenv("PROVISION_PATH")
+PROVISION = os.path.abspath(os.getenv("PROVISION_PATH"))
+
+
+hasZsign = subprocess.run(['docker', 'images', '-q', 'zsign'], stdout=subprocess.PIPE)
+if not hasZsign.stdout:
+    subprocess.run(['docker', 'build', '-t', 'zsign', 'https://github.com/zhlynn/zsign.git'])
+
 
 session = boto3.session.Session()
 client = session.client('s3',
@@ -72,7 +78,10 @@ def generatePlist(ipaPath):
 
 def sign(ipa):
     #zsign -k *.p12 -m *.mobileprovision -o "Youtube Bat.ipa" -p 1 *.ipa
-    subprocess.run(['zsign', 
+    subprocess.run(['docker run',
+                '-v', "$PWD:$PWD",
+                '-w', "$PWD",
+                'zsign', 
                 '-k', P12, 
                 '-m', PROVISION, 
                 '-o', ipa, 
